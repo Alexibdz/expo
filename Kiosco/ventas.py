@@ -7,7 +7,9 @@ from mysql.connector import Error
 class Ventas(tk.Frame):
     def __init__(self, parametro):
         super().__init__(parametro)  # 1100, 650
+        self.numero_factura_actual = self.obtener_numero_factura_actual()
         self.widgets()
+        self.mostrar_numero_factura()
 
     def widgets(self):
         frame1 = tk.Frame(self, bg="#dddddd", highlightbackground="gray", highlightthickness=1)
@@ -78,13 +80,13 @@ class Ventas(tk.Frame):
         lbl_frame1 = LabelFrame(frame2, text="Opciones", bg="#C6D9E3", font="sans 12 bold")
         lbl_frame1.place(x=10, y=380, width=1060, height=100)
 
-        btn_agregar = tk.Button(lbl_frame1, text="Agregar articulo", bg="#dddddd", font="sans 12 bold")
+        btn_agregar = tk.Button(lbl_frame1, text="Agregar articulo", bg="#dddddd", font="sans 12 bold", command=self.registrar)
         btn_agregar.place(x=50, y=10, width=240, height=50)
 
-        btn_pagar = tk.Button(lbl_frame1, text="Pagar", bg="#dddddd", font="sans 12 bold")
+        btn_pagar = tk.Button(lbl_frame1, text="Pagar", bg="#dddddd", font="sans 12 bold", command=self.abrir_ventana_pago)
         btn_pagar.place(x=400, y=10, width=240, height=50)
 
-        btn_ver_facturas = tk.Button(lbl_frame1, text="Ver facturas", bg="#dddddd", font="sans 12 bold")
+        btn_ver_facturas = tk.Button(lbl_frame1, text="Ver facturas", bg="#dddddd", font="sans 12 bold", command=self.abrir_ventana_factura)
         btn_ver_facturas.place(x=750, y=10, width=240, height=50)
 
         self.lbl_suma_total = tk.Label(frame2, text="Total a pagar: ARS 0", bg="#C6D9E3", font="sans 25 bold")
@@ -167,7 +169,7 @@ class Ventas(tk.Frame):
                 precio = float(precio)
                 subtotal = cantidad * precio
                 
-                self.tree.insert("", "end", values=(producto, f"{precio:.0f}", cantidad, f"subtotal:.0f"))
+                self.tree.insert("", "end", values=(producto, f"{precio:.0f}", cantidad, f"{subtotal:.0f}"))
                 
                 self.entry_nombre.set("")
                 self.entry_valor.config(state="normal")
@@ -187,7 +189,7 @@ class Ventas(tk.Frame):
             try:
                 c = conexion.cursor()
                 c.execute("SELECT stock FROM inventario WHERE nombre = %s", (nombre_producto,))
-                stock = c.fetchone
+                stock = c.fetchone()
                 if stock and stock[0] >= cantidad:
                     return True
                 return False
@@ -195,11 +197,12 @@ class Ventas(tk.Frame):
                 messagebox.showerror("Error", f"Error al verificar el stock: {e}")
             finally:
                 conexion.close()
+
     
     def obtener_total(self):
         total = 0.0
         for child in self.tree.get_children():
-            subtotal = float(self.tree.item(child, "values" [3]))
+            subtotal = float(self.tree.item(child, "values")[3])
             total += subtotal
         return total
     
@@ -218,14 +221,15 @@ class Ventas(tk.Frame):
         lbl_total.place(x=70, y=20)
 
         lbl_cantidad_pagada = tk.Label(ventana_pago, bg="#C6D9E3", text="Cantidad pagada:", font="sans 14 bold")
-        lbl_cantidad_pagada.pack(x=100, y=90)
+        lbl_cantidad_pagada.place(x=100, y=90)
+
         entry_cantidad_pagada = ttk.Entry(ventana_pago, font="sans 14 bold")
         entry_cantidad_pagada.place(x=100, y=130)
 
         lbl_cambio = tk.Label(ventana_pago, bg="#C6D9E3", text="", font="sans 14 bold")
         lbl_cambio.place(x=100, y=190)
 
-        def calcular_cambio()
+        def calcular_cambio():
             try:
                 cantidad_pagada = float(entry_cantidad_pagada.get())
                 total = self.obtener_total()
@@ -237,10 +241,142 @@ class Ventas(tk.Frame):
             except ValueError:
                 messagebox.showerror("Error", "Cantida pagada no valida.")
 
-            btn_calcular = tk.Button(ventana_pago, text="Calcular Vuelto", bg="white", font="sans 12 bold", command=calcular_cambio)
-            btn_calcular.place(x=100, y=240, width=240, height=40)
+        btn_calcular = tk.Button(ventana_pago, text="Calcular Vuelto", bg="white", font="sans 12 bold", command=calcular_cambio)
+        btn_calcular.place(x=100, y=240, width=240, height=40)
 
-            btn_pagar = tk.Button(ventana_pago, text="Pagar", bg="white", font="sans 12 bold", command=lambda: self.pagar(ventana_pago, entry_cantidad_pagada, lbl_cambio))
-            btn_pagar.place(x=100, y=300, width=240, height=40)
+        btn_pagar = tk.Button(ventana_pago, text="Pagar", bg="white", font="sans 12 bold", command=lambda: self.pagar(ventana_pago, entry_cantidad_pagada, lbl_cambio))
+        btn_pagar.place(x=100, y=300, width=240, height=40)
 
     def pagar(self, ventana_pago, entry, label):
+        try:
+            cantidad_pagada = float(entry.get())
+            total = self.obtener_total()
+            cambio = cantidad_pagada - total
+            if cambio < 0:
+                messagebox.showerror("Error", "La cantidad pagada es insuficiente.")
+                return
+            
+            conexion = self.crear_conexion()
+            c = conexion.cursor()
+            try:
+                for child in self.tree.get_children():
+                    item = self.tree.item(child, "values")
+                    nombre_producto = item[0]
+                    cantidad_vendida = int(item[2])
+
+                    # Verificar si hay suficiente stock
+                    if not self.verificar_stock(nombre_producto, cantidad_vendida):
+                        messagebox.showerror("Error", f"Stock insuficiente para el producto: {nombre_producto}")
+                        return
+
+                    # Insertar la venta en la tabla 'ventas'
+                    c.execute("""
+                        INSERT INTO ventas (factura, nombre_articulo, valor_articulo, cantidad, subtotal) 
+                        VALUES (%s, %s, %s, %s, %s)
+                    """, (self.numero_factura_actual, nombre_producto, float(item[1]), cantidad_vendida, float(item[3])))
+
+                    # Actualizar el stock en la tabla 'inventario'
+                    c.execute("""
+                        UPDATE inventario 
+                        SET stock = stock - %s 
+                        WHERE nombre = %s
+                    """, (cantidad_vendida, nombre_producto))
+
+                conexion.commit()
+                messagebox.showinfo("Éxito", "Venta registrada exitosamente")
+
+                self.numero_factura_actual += 1
+                self.mostrar_numero_factura()
+
+                for child in self.tree.get_children():
+                    self.tree.delete(child)
+                self.lbl_suma_total.config(text="Total a pagar: ARS 0")
+                ventana_pago.destroy()
+
+            except mysql.connector.Error as e:
+                conexion.rollback()
+                messagebox.showerror("Error", f"Error al registrar la venta: {e}")
+
+            finally:
+                conexion.close()
+
+        except ValueError:
+            messagebox.showerror("Error", "Cantidad pagada inválida.")
+
+    def obtener_numero_factura_actual(self):
+        conexion = self.crear_conexion()
+        c = conexion.cursor()
+        try:
+            c.execute("SELECT MAX(factura) FROM ventas")
+            max_factura = c.fetchone()[0]
+            if max_factura:
+                return max_factura + 1
+            else:
+                return 1
+        except mysql.connector.Error as e:
+            messagebox.showerror("Error", f"Error al obtener el número de factura: {e}")
+            return 1
+        finally:
+            conexion.close()
+
+    def mostrar_numero_factura(self):
+        self.numero_factura.set(self.numero_factura_actual)
+    
+    def abrir_ventana_factura(self):
+        ventana_facturas = Toplevel
+        ventana_facturas.title("Factura")
+        ventana_facturas.geometry("800x500")
+        ventana_facturas.config(bg="C6D9E3")
+        ventana_facturas.resizable(False, False)
+
+        facturas = Label(ventana_facturas, bg="#C6D9E3", text="facturas registradas", font="sans 36 bold")
+        facturas.place(x=150, y=15)
+
+        treeframe = tk.Frame(ventana_facturas, bg="#C6D9E3")
+        treeframe.place(x=10, y=100, width=780, height=380)
+
+        scroll_y = ttk.Scrollbar(treeframe, orient=VERTICAL)
+        scroll_y.pack(side=RIGHT, fill=Y)
+
+        scroll_x = ttk.Scrollbar(treeframe, orient=HORIZONTAL)
+        scroll_x.pack(side=BOTTOM, fill=X)
+
+        tree_facturas = ttk.Treeview(treeframe, columns=("ID", "Factura", "Producto", "Precio", "Cantidad", "Subtotal"), show="headings",
+                                 height=10, yscrollcommand=scroll_y.set, xscrollcommand=scroll_x.set)
+        scroll_y.config(command=tree_facturas.yview)
+        scroll_x.config(command=tree_facturas.xview)
+
+        tree_facturas.heading("#1", text="ID")
+        tree_facturas.heading("#2", text="Factura")
+        tree_facturas.heading("#3", text="Producto")
+        tree_facturas.heading("#4", text="Precio")
+        tree_facturas.heading("#5", text="Cantidad")
+        tree_facturas.heading("#6", text="Subtotal")
+
+        tree_facturas.column("ID", width=70, anchor="center")
+        tree_facturas.column("Factura", width=100, anchor="center")
+        tree_facturas.column("Producto", width=200, anchor="center")
+        tree_facturas.column("Precio", width=130, anchor="center")
+        tree_facturas.column("Cantidad", width=130, anchor="center")
+        tree_facturas.column("Subtotal", width=130, anchor="center")
+
+
+        self.tree.pack(expand=True, fill=BOTH)
+
+        self.cargar_facturas(tree_facturas)
+    
+    def cargar_facturas(self, tree):
+        try:
+            conexion = self.crear_conexion()
+            c = conexion.cursor()
+            c.execute("SELECT * FROM ventas")
+            facturas = c.fetchall()
+            for factura in facturas:
+                tree.insert("", "end", values=factura)
+            conexion.close()
+        except mysql.connector.Error as e:
+            messagebox.showerror("Error", f"Error al cargar las facturas: {e}")
+        finally:
+            conexion.close()
+
+

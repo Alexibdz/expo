@@ -11,7 +11,7 @@ ventana_principal.config(background='white')
 class auto_de_carrera:
     def __init__(self, nombre, nro):
         self.name = nombre
-        self.auto_url = tk.PhotoImage(file=f"./images/auto{nro}.png").zoom(4).subsample(50)
+        self.auto_url = tk.PhotoImage(file=f"Carrera_de_autos/images/auto{nro}.png").zoom(4).subsample(50)
         self.pista = tk.Canvas(label_frame, width=1800, height=100, bg='grey')
         self.posicion_x = 0
         self.auto_imagen = self.pista.create_image(self.posicion_x, 50, anchor="nw", image=self.auto_url)
@@ -53,7 +53,7 @@ def empezar_juego():
         
         time.sleep(0.05)
         for competidor in competidores:
-            nueva_posicion = random.randint(0, 20)
+            nueva_posicion = random.randint(0, 10)
             competidor.pista.move(competidor.auto_imagen, nueva_posicion, 0)
             competidor.posicion_x += nueva_posicion
             print(competidor.posicion_x)
