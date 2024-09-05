@@ -1,2 +1,4 @@
 pip install ttktheme
-pip install pyllow
+pip install pillow
+pip install mysql-connector-python
+pip install tkinter

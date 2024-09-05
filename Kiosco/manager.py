@@ -1,5 +1,7 @@
 from tkinter import Tk, Frame
 from container import Container
+from ttkthemes import ThemedStyle
+
 class Manager(Tk):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -16,6 +18,8 @@ class Manager(Tk):
         self.cargar_frames()
 
         self.mostar_frames(Container)
+        
+        self.set_theme()
 
     def cargar_frames(self):
         for item in self.frames.keys():
@@ -25,6 +29,10 @@ class Manager(Tk):
     def mostar_frames(self, item):
         frame = self.frames[item]
         frame.tkraise()
+    
+    def set_theme(self):
+        estilo = ThemedStyle(self)
+        estilo.set_theme("breeze")
 
 def main():
     app = Manager()

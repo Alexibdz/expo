@@ -1,6 +1,6 @@
-CREATE DATABASE KIOSCO_DB;
+CREATE DATABASE kiosco_db;
 
-USE KIOSCO_DB;
+USE kiosco_db;
 
 -- Crear la tabla 'ventas'
 CREATE TABLE ventas (
@@ -21,3 +21,32 @@ CREATE TABLE inventario (
     costo DECIMAL(10, 2) NOT NULL,
     stock INT NOT NULL
 );
+
+-- Insertar valores en la tabla 'ventas'
+INSERT INTO ventas (factura, nombre_articulo, valor_articulo, cantidad, subtotal) 
+VALUES 
+(1001, 'Coca Cola', 500, 2, 1000),
+(1002, 'Pepsi', 480, 1, 480),
+(1003, 'Agua Mineral', 350, 3, 1050),
+(1004, 'Galletas Oreo', 280, 4, 1120),
+(1005, 'Alfajor Jorgito', 220, 5, 1100),
+(1006, 'Helado', 700, 1, 700),
+(1007, 'Tita', 200, 3, 600),
+(1008, 'Jugo de Naranja', 450, 2, 900),
+(1009, 'Lays Papas', 400, 4, 1600),
+(1010, 'Yerba Mate Taragüi', 1200, 1, 1200);
+
+-- Insertar valores en la tabla 'inventario'
+INSERT INTO inventario (nombre, proveedor, precio, costo, stock) 
+VALUES 
+('Coca Cola', 'Coca Cola Company', 500.00, 350.00, 50),
+('Pepsi', 'PepsiCo', 480.00, 320.00, 40),
+('Agua Mineral', 'Nestlé', 350.00, 220.00, 100),
+('Galletas Oreo', 'Mondelez', 280.00, 180.00, 70),
+('Alfajor Jorgito', 'Jorgito', 220.00, 150.00, 60),
+('Helado', 'Grido', 700.00, 500.00, 20),
+('Tita', 'Mondelēz', 200.00, 130.00, 80),
+('Jugo de Naranja', 'Cepita', 450.00, 300.00, 40),
+('Lays Papas', 'PepsiCo', 400.00, 250.00, 80),
+('Yerba Mate Taragüi', 'Las Marías', 1200.00, 900.00, 30);
+
