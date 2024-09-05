@@ -194,4 +194,53 @@ class Ventas(tk.Frame):
             except mysql.connector.Error as e:
                 messagebox.showerror("Error", f"Error al verificar el stock: {e}")
             finally:
-                conexion.close()     
+                conexion.close()
+    
+    def obtener_total(self):
+        total = 0.0
+        for child in self.tree.get_children():
+            subtotal = float(self.tree.item(child, "values" [3]))
+            total += subtotal
+        return total
+    
+    def abrir_ventana_pago(self):
+        if not self.tree.get_children():
+            messagebox.showerror("Error", "No hay articulos para pagar.")
+            return
+        
+        ventana_pago = Toplevel(self)
+        ventana_pago.title("Realizar pago")
+        ventana_pago.geometry("400x400")
+        ventana_pago.config(bg="#C6D9E3")
+        ventana_pago.resizable(False, False)
+
+        lbl_total = tk.Label(ventana_pago, bg="#C6D9E3", text=f"Total a pagar: ARS {self.obtener_total():.0f}", font="sans 18 bold")
+        lbl_total.place(x=70, y=20)
+
+        lbl_cantidad_pagada = tk.Label(ventana_pago, bg="#C6D9E3", text="Cantidad pagada:", font="sans 14 bold")
+        lbl_cantidad_pagada.pack(x=100, y=90)
+        entry_cantidad_pagada = ttk.Entry(ventana_pago, font="sans 14 bold")
+        entry_cantidad_pagada.place(x=100, y=130)
+
+        lbl_cambio = tk.Label(ventana_pago, bg="#C6D9E3", text="", font="sans 14 bold")
+        lbl_cambio.place(x=100, y=190)
+
+        def calcular_cambio()
+            try:
+                cantidad_pagada = float(entry_cantidad_pagada.get())
+                total = self.obtener_total()
+                cambio = cantidad_pagada - total
+                if cambio < 0:
+                    messagebox("Error", "La cantidad pagada es insuficiente.")
+                    return
+                lbl_cambio.config(text=f"Vuelto: ARS {cambio:.0f}")
+            except ValueError:
+                messagebox.showerror("Error", "Cantida pagada no valida.")
+
+            btn_calcular = tk.Button(ventana_pago, text="Calcular Vuelto", bg="white", font="sans 12 bold", command=calcular_cambio)
+            btn_calcular.place(x=100, y=240, width=240, height=40)
+
+            btn_pagar = tk.Button(ventana_pago, text="Pagar", bg="white", font="sans 12 bold", command=lambda: self.pagar(ventana_pago, entry_cantidad_pagada, lbl_cambio))
+            btn_pagar.place(x=100, y=300, width=240, height=40)
+
+    def pagar(self, ventana_pago, entry, label):
