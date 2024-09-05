@@ -1,0 +1,23 @@
+CREATE DATABASE KIOSCO_DB;
+
+USE KIOSCO_DB;
+
+-- Crear la tabla 'ventas'
+CREATE TABLE ventas (
+    id INT AUTO_INCREMENT PRIMARY KEY NOT NULL,
+    factura INT NOT NULL,
+    nombre_articulo TEXT NOT NULL,
+    valor_articulo INT NOT NULL,
+    cantidad INT NOT NULL,
+    subtotal INT NOT NULL
+);
+
+-- Crear la tabla 'inventario'
+CREATE TABLE inventario (
+    id INT AUTO_INCREMENT PRIMARY KEY NOT NULL,
+    nombre TEXT NOT NULL,
+    proveedor TEXT NOT NULL,
+    precio DECIMAL(10, 2) NOT NULL,
+    costo DECIMAL(10, 2) NOT NULL,
+    stock INT NOT NULL
+);
