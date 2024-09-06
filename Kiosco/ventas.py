@@ -239,7 +239,8 @@ class Ventas(tk.Frame):
                     return
                 lbl_cambio.config(text=f"Vuelto: ARS {cambio:.0f}")
             except ValueError:
-                messagebox.showerror("Error", "Cantida pagada no valida.")
+                messagebox.showerror("Error", "La cantidad pagada es insuficiente.")
+
 
         btn_calcular = tk.Button(ventana_pago, text="Calcular Vuelto", bg="white", font="sans 12 bold", command=calcular_cambio)
         btn_calcular.place(x=100, y=240, width=240, height=40)
@@ -323,10 +324,10 @@ class Ventas(tk.Frame):
         self.numero_factura.set(self.numero_factura_actual)
     
     def abrir_ventana_factura(self):
-        ventana_facturas = Toplevel
+        ventana_facturas = Toplevel(self)
         ventana_facturas.title("Factura")
         ventana_facturas.geometry("800x500")
-        ventana_facturas.config(bg="C6D9E3")
+        ventana_facturas.config(bg="#C6D9E3")
         ventana_facturas.resizable(False, False)
 
         facturas = Label(ventana_facturas, bg="#C6D9E3", text="facturas registradas", font="sans 36 bold")
@@ -341,8 +342,8 @@ class Ventas(tk.Frame):
         scroll_x = ttk.Scrollbar(treeframe, orient=HORIZONTAL)
         scroll_x.pack(side=BOTTOM, fill=X)
 
-        tree_facturas = ttk.Treeview(treeframe, columns=("ID", "Factura", "Producto", "Precio", "Cantidad", "Subtotal"), show="headings",
-                                 height=10, yscrollcommand=scroll_y.set, xscrollcommand=scroll_x.set)
+        tree_facturas = ttk.Treeview(treeframe, columns=("ID", "Factura", "Producto", "Precio", "Cantidad", "Subtotal"), 
+                                    show="headings", height=10, yscrollcommand=scroll_y.set, xscrollcommand=scroll_x.set)
         scroll_y.config(command=tree_facturas.yview)
         scroll_x.config(command=tree_facturas.xview)
 
@@ -360,11 +361,10 @@ class Ventas(tk.Frame):
         tree_facturas.column("Cantidad", width=130, anchor="center")
         tree_facturas.column("Subtotal", width=130, anchor="center")
 
-
-        self.tree.pack(expand=True, fill=BOTH)
+        tree_facturas.pack(expand=True, fill=BOTH)  # Cambiado self.tree por tree_facturas
 
         self.cargar_facturas(tree_facturas)
-    
+
     def cargar_facturas(self, tree):
         try:
             conexion = self.crear_conexion()
@@ -373,10 +373,8 @@ class Ventas(tk.Frame):
             facturas = c.fetchall()
             for factura in facturas:
                 tree.insert("", "end", values=factura)
-            conexion.close()
         except mysql.connector.Error as e:
             messagebox.showerror("Error", f"Error al cargar las facturas: {e}")
         finally:
-            conexion.close()
-
+            conexion.close()  # Solo cerramos una vez
 
