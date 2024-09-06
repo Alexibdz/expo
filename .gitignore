@@ -1,3 +1,4 @@
 Kiosco/__pycache__/
 __pycache__
 *.pyc
+/Kiosco/facturas/*

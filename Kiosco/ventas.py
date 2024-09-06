@@ -3,6 +3,13 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import mysql.connector
 from mysql.connector import Error
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from reportlab.platypus import Table
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+import sys
+import os
+import datetime
 
 class Ventas(tk.Frame):
     def __init__(self, parametro):
@@ -260,28 +267,32 @@ class Ventas(tk.Frame):
             conexion = self.crear_conexion()
             c = conexion.cursor()
             try:
+                productos = []
                 for child in self.tree.get_children():
                     item = self.tree.item(child, "values")
-                    nombre_producto = item[0]
+                    producto = item[0]
+                    precio = item[1]
                     cantidad_vendida = int(item[2])
+                    subtotal = float(item[3])
+                    productos.append([producto, precio, cantidad_vendida, subtotal])
 
                     # Verificar si hay suficiente stock
-                    if not self.verificar_stock(nombre_producto, cantidad_vendida):
-                        messagebox.showerror("Error", f"Stock insuficiente para el producto: {nombre_producto}")
+                    if not self.verificar_stock(producto, cantidad_vendida):
+                        messagebox.showerror("Error", f"Stock insuficiente para el producto: {producto}")
                         return
 
                     # Insertar la venta en la tabla 'ventas'
                     c.execute("""
                         INSERT INTO ventas (factura, nombre_articulo, valor_articulo, cantidad, subtotal) 
                         VALUES (%s, %s, %s, %s, %s)
-                    """, (self.numero_factura_actual, nombre_producto, float(item[1]), cantidad_vendida, float(item[3])))
+                    """, (self.numero_factura_actual, producto, float(precio), cantidad_vendida, float(subtotal)))
 
                     # Actualizar el stock en la tabla 'inventario'
                     c.execute("""
                         UPDATE inventario 
                         SET stock = stock - %s 
                         WHERE nombre = %s
-                    """, (cantidad_vendida, nombre_producto))
+                    """, (cantidad_vendida, producto))
 
                 conexion.commit()
                 messagebox.showinfo("Éxito", "Venta registrada exitosamente")
@@ -294,6 +305,9 @@ class Ventas(tk.Frame):
                 self.lbl_suma_total.config(text="Total a pagar: ARS 0")
                 ventana_pago.destroy()
 
+                fecha = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                self.generar_factura_pdf(productos, total, self.numero_factura_actual - 1, fecha)
+
             except mysql.connector.Error as e:
                 conexion.rollback()
                 messagebox.showerror("Error", f"Error al registrar la venta: {e}")
@@ -303,6 +317,41 @@ class Ventas(tk.Frame):
 
         except ValueError:
             messagebox.showerror("Error", "Cantidad pagada inválida.")
+
+    def generar_factura_pdf(self, productos, total, factura_numero, fecha):
+        archivo_pdf = f"./Kiosco/facturas/factura_{factura_numero}.pdf"
+
+        c = canvas.Canvas(archivo_pdf, pagesize=letter)
+        width, height = letter
+
+        styles = getSampleStyleSheet()
+        estilo_titulo = styles["Title"]
+        estilo_normal = styles["Normal"]
+
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(100, height - 50, f"Facutra #{factura_numero}")
+
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(100, height - 70, f"Fecha: {fecha}")
+
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(100, height - 100, "Informacion de la venta")
+
+        data = [("Producto", "Precio", "Cantidad", "Subtotal")] + productos
+        table = Table(data)
+        table.wrapOn(c, width, height)
+        table.drawOn(c, 100, height - 200)
+
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(100, height - 250, f"Total a pagar: ${total:.0f} ARS")
+
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(100, height - 400, "Gracias por su compra!")
+
+        c.save()
+
+        messagebox.showinfo("Factura Generada", f"La factura #{factura_numero} ha sido creada exitosamente.")
+        os.startfile(os.path.abspath(archivo_pdf))
 
     def obtener_numero_factura_actual(self):
         conexion = self.crear_conexion()
